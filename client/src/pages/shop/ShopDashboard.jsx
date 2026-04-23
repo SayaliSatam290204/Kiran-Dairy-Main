@@ -237,8 +237,8 @@ export const ShopDashboard = () => {
           {receivedDispatches.length > 0 && (
             <Card title="Recently Received Stock" className="border-green-200">
               <div className="space-y-4">
-                {receivedDispatches.slice(0, 5).map((dispatch) => (
-                  <div key={dispatch._id} className="border border-green-100 rounded-lg p-4 bg-green-50">
+{receivedDispatches.slice(0, 5).map((dispatch) => (
+                  <div key={dispatch._id || dispatch.id} className="border border-green-100 rounded-lg p-4 bg-green-50">
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <p className="font-semibold text-gray-900">
@@ -249,7 +249,7 @@ export const ShopDashboard = () => {
                         </p>
                         {dispatch.confirmedBy && (
                           <p className="text-xs text-gray-600">
-                            Confirmed by: {dispatch.confirmedBy.name}
+                            Confirmed by: {dispatch.confirmedBy?.name}
                           </p>
                         )}
                       </div>
@@ -258,13 +258,13 @@ export const ShopDashboard = () => {
 
                     {/* Products in this dispatch */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {dispatch.items.map((item, idx) => (
+                      {dispatch.items?.map((item, idx) => (
                         <div key={idx} className="bg-white rounded p-2 text-sm">
                           <p className="font-medium text-gray-900">
-                            {item.productId?.name}
+                            {item.productId?.name || 'Product'}
                           </p>
                           <p className="text-xs text-gray-600">
-                            Qty: <span className="font-semibold">{item.quantity}</span>
+                            Qty: <span className="font-semibold">{item.quantity || 0}</span>
                           </p>
                           <p className="text-xs text-green-600">
                             {formatCurrency(item.productId?.price || 0)}
