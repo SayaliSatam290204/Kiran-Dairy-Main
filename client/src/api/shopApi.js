@@ -17,8 +17,11 @@ export const shopApi = {
       params: { year, month }
     }),
   // Restock Requests (shop submits to admin)
-  createRestockRequest: (data) => axiosInstance.post('/ledger/restock-requests', data)
+  createRestockRequest: (data) => axiosInstance.post('/ledger/restock-requests', data),
+  getPreviewData: () => axiosInstance.get('/shop/preview') // Landing page charts
 };
+
+
 
 
 

@@ -1,16 +1,13 @@
 import mongoose from "mongoose";
-import Inventory from "../models/Inventory.js";
-import Product from "../models/Product.js";
 import Sale from "../models/Sale.js";
-import Dispatch from "../models/Dispatch.js";
-import Return from "../models/Return.js";
+import Shop from "../models/Shop.js";
 import Staff from "../models/Staff.js";
-import { inventoryService } from "../services/inventoryService.js";
-import { staffPerformanceService } from "../services/staffPerformanceService.js";
+import Inventory from "../models/Inventory.js";
+import Dispatch from "../models/Dispatch.js";
 import { responseHelper } from "../utils/responseHelper.js";
 
 export const shopController = {
-  getDashboard: async (req, res) => {
+getDashboard: async (req, res) => {
     try {
 
       const shopId = req.user.shopId;
@@ -167,5 +164,120 @@ export const shopController = {
       console.error("Error fetching staff detailed performance:", error);
       responseHelper.error(res, "Failed to fetch staff detailed performance", 500);
     }
+  },
+
+  // NEW: Landing page preview data (public - no auth)
+  getPreviewData: async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const last30Days = new Date(today);
+    last30Days.setDate(today.getDate() - 30);
+
+    // ==================== BRANCH REVENUE ====================
+    const branchSales = await Sale.aggregate([
+      {
+        $match: {
+          saleDate: { $gte: last30Days }
+        }
+      },
+      {
+        $lookup: {
+          from: "shops",
+          localField: "shopId",
+          foreignField: "_id",
+          as: "shopDoc"
+        }
+      },
+      { $unwind: "$shopDoc" }, // ✅ FIXED
+      {
+        $group: {
+          _id: "$shopDoc._id",
+          shopName: { $first: "$shopDoc.name" },
+          actualRevenue: { $sum: "$totalAmount" },
+          totalTransactions: { $sum: 1 },
+          expectedRevenue: {
+            $sum: { $multiply: ["$totalAmount", 1.2] } // ✅ FIXED
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          shopName: 1,
+          actualRevenue: 1,
+          totalTransactions: 1,
+          expectedRevenue: 1
+        }
+      },
+      { $sort: { actualRevenue: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // ==================== STAFF PERFORMANCE ====================
+    const staffPerf = await Sale.aggregate([
+      {
+        $match: {
+          saleDate: { $gte: last30Days },
+          staffId: { $exists: true, $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: "$staffId",
+          totalSales: { $sum: 1 },
+          totalAmount: { $sum: "$totalAmount" }
+        }
+      },
+      {
+        $lookup: {
+          from: "staffs",
+          localField: "_id",
+          foreignField: "_id",
+          as: "staff"
+        }
+      },
+      { $unwind: "$staff" }, // ✅ FIXED
+      {
+        $project: {
+          _id: 0,
+          name: "$staff.name",
+          monthly: {
+            totalSales: "$totalSales",
+            totalAmount: "$totalAmount"
+          }
+        }
+      },
+      { $sort: { "monthly.totalAmount": -1 } },
+      { $limit: 5 }
+    ]);
+
+    // ==================== RESPONSE ====================
+    responseHelper.success(
+      res,
+      {
+        branchData: branchSales,
+        topBranchesData: branchSales,
+        staffData: staffPerf
+      },
+      "Preview data fetched successfully"
+    );
+
+  } catch (error) {
+    console.error("Preview data error:", error);
+
+    // Optional fallback (you can keep or remove)
+    responseHelper.success(
+      res,
+      {
+        branchData: [],
+        topBranchesData: [],
+        staffData: []
+      },
+      "Preview fallback data"
+    );
   }
+}
 };
+

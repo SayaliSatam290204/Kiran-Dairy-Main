@@ -66,7 +66,7 @@ export const Bill = ({ billData }) => {
 
               return (
                 <tr key={idx} className="border-b">
-                  <td className="py-2">{item.productName || "Item"}</td>
+                  <td className="py-2">{item.productName || item.productId?.name || "Item"}</td>
                   <td className="text-center">{item.quantity || 0}</td>
                   <td className="text-right">{formatCurrency(item.price || 0)}</td>
                   <td className="text-right">{formatCurrency(subtotal || 0)}</td>

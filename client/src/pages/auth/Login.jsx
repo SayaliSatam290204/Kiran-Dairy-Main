@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FaCrown } from "react-icons/fa";
 import { authApi } from "../../api/authApi.js";
@@ -11,6 +11,8 @@ import { Button } from "../../components/ui/Button.jsx";
 export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const roleParam = searchParams.get('role');
 
   const [selectedRole, setSelectedRole] = useState(null);
   const [email, setEmail] = useState("");
@@ -21,6 +23,12 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const isDev = import.meta?.env?.DEV;
+
+  useEffect(() => {
+    if (roleParam && !selectedRole) {
+      handleRoleSelect(roleParam);
+    }
+  }, [roleParam, selectedRole]);
 
   const handleRoleSelect = (role) => {
     setSelectedRole(role);
@@ -102,7 +110,7 @@ export const Login = () => {
     }
   };
 
-  // Role Selection View
+  // Skip role selection if role from URL param
   if (!selectedRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -198,8 +206,9 @@ export const Login = () => {
 
           <div className="space-y-2">
             <Input
-              label="Password"
+              label="Password" 
               type={showPassword ? "text" : "password"}
+              autoComplete={showPassword ? "off" : "current-password"}
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -222,25 +231,31 @@ export const Login = () => {
           </Button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-gray-300 space-y-3">
-          <button
-            type="button"
-            onClick={handleBackToRoleSelect}
-            className="w-full text-center py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition"
-            disabled={loading}
-          >
-            ← Back to role selection
-          </button>
 
-          <button
-            type="button"
-            onClick={() => navigate("/register")}
-            className="w-full text-center py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition"
-            disabled={loading}
-          >
-            ← Create new account
-          </button>
-        </div>
+        {roleParam && (
+          <div className="mt-6 pt-4 border-t border-gray-300">
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="w-full text-center py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition"
+              disabled={loading}
+            >
+              ← Back to Landing
+            </button>
+          </div>
+        )}
+        {!roleParam && (
+          <div className="mt-6 pt-4 border-t border-gray-300">
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="w-full text-center py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition"
+              disabled={loading}
+            >
+              ← Create new account
+            </button>
+          </div>
+        )}
       </Card>
     </div>
   );

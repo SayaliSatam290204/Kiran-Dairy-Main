@@ -2,8 +2,10 @@ import axiosInstance from "./axiosInstance";
 
 export const superAdminApi = {
   // Get comprehensive dashboard
-  getDashboard: async () => {
-    return await axiosInstance.get("/super-admin/dashboard");
+  getDashboard: async (filters = {}) => {
+    return await axiosInstance.get("/super-admin/dashboard", {
+      params: filters
+    });
   },
 
   // Get detailed branch report

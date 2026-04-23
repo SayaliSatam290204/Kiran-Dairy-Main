@@ -2,6 +2,13 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { FaDownload } from "react-icons/fa";
 import { Button } from "../../components/ui/Button.jsx";
+import { ChartFilters } from "../../components/common/ChartFilters.jsx";
+import { ChartContainer } from "../../components/common/ChartContainer.jsx";
+import TopBranchesBarChart from "../../components/analytics/TopBranchesBarChart.jsx";
+import BranchPerformanceChart from "../../components/analytics/BranchPerformanceChart.jsx";
+import ProductRevenueChart from "../../components/analytics/ProductRevenueChart.jsx";
+import RevenueDoughnut from "../../components/analytics/RevenueDoughnut.jsx";
+import BranchDetailChart from "../../components/analytics/BranchDetailChart.jsx";
 import { superAdminApi } from "../../api/superAdminApi.js";
 import { formatCurrency } from "../../utils/formatCurrency.js";
 import {
@@ -31,6 +38,12 @@ export const SuperAdminDashboard = () => {
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [branchReport, setBranchReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [filters, setFilters] = useState({ 
+    dateRange: '30', 
+    selectedBranches: [], 
+    viewType: 'all',
+    days: 30
+  });
 
   const summaryCardBodyStyle = {
     minHeight: 148,
@@ -126,14 +139,15 @@ export const SuperAdminDashboard = () => {
         : "bg-slate-50/60 hover:!bg-blue-50/70 transition-colors duration-200",
   };
 
+  // Initial load + refetch on filter changes
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [filters]);
 
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const response = await superAdminApi.getDashboard();
+      const response = await superAdminApi.getDashboard(filters);
       setDashboardData(response.data.data);
     } catch (error) {
       console.error("Failed to fetch dashboard:", error);
@@ -326,12 +340,45 @@ export const SuperAdminDashboard = () => {
         </div>
       </div>
 
+      {/* Time Range Filter */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <select 
+          value={filters.days} 
+          onChange={(e) => {
+            const newDays = parseInt(e.target.value);
+            setFilters(prev => ({...prev, days: newDays}));
+            fetchDashboard(); // Refetch with new range
+          }}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:shadow-md transition-all cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value={7}>Last 7 days</option>
+          <option value={30}>Last 30 days</option>
+          <option value={90}>Last 90 days</option>
+          <option value={365}>Last 365 days</option>
+        </select>
+        
+        {dashboardData?.summary?.timeRange && (
+          <div className="text-sm text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg font-medium">
+            Data for last {dashboardData.summary.timeRange.days} days
+          </div>
+        )}
+      </div>
+
+      {dashboardData && (
+        <ChartFilters
+          dashboardData={dashboardData}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+      )}
+      
       <div className="rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-sm">
         <div className="flex flex-wrap gap-1.5">
           {[
             { id: 0, label: "Overview" },
             { id: 1, label: "Branch Analytics" },
-            { id: 2, label: "Product Distribution" },
+            { id: 4, label: "Charts" },
+            { id: 2, label: "Products" },
             { id: 3, label: "Branch Details", hidden: !selectedBranch },
           ].map(
             (tab) =>
@@ -357,7 +404,7 @@ export const SuperAdminDashboard = () => {
           <Row gutter={[12, 12]}>
             {overviewCards.map((card) => (
               <Col xs={24} sm={12} md={6} key={card.key}>
-                <AntCard bodyStyle={summaryCardBodyStyle} style={card.style} hoverable>
+                <AntCard styles={{ body: summaryCardBodyStyle }} style={card.style} hoverable>
                   {card.icon}
                   <div style={summaryCardHeaderStyle}>
                     {card.headerIcon}
@@ -374,7 +421,7 @@ export const SuperAdminDashboard = () => {
 
           <Row gutter={[12, 12]}>
             <Col xs={24} sm={8}>
-              <AntCard bodyStyle={compactCardBodyStyle} style={statsPanelStyle} hoverable>
+              <AntCard styles={{ body: compactCardBodyStyle }} style={statsPanelStyle} hoverable>
                 <Statistic
                   title={<span style={{ color: "#64748b", fontWeight: 500 }}>Total Transactions</span>}
                   value={summary.totalSalesTransactions}
@@ -389,7 +436,7 @@ export const SuperAdminDashboard = () => {
             </Col>
 
             <Col xs={24} sm={8}>
-              <AntCard bodyStyle={compactCardBodyStyle} style={statsPanelStyle} hoverable>
+              <AntCard styles={{ body: compactCardBodyStyle }} style={statsPanelStyle} hoverable>
                 <Statistic
                   title={<span style={{ color: "#64748b", fontWeight: 500 }}>Total Staff</span>}
                   value={summary.totalStaff}
@@ -404,7 +451,7 @@ export const SuperAdminDashboard = () => {
             </Col>
 
             <Col xs={24} sm={8}>
-              <AntCard bodyStyle={compactCardBodyStyle} style={statsPanelStyle} hoverable>
+              <AntCard styles={{ body: compactCardBodyStyle }} style={statsPanelStyle} hoverable>
                 <Statistic
                   title={<span style={{ color: "#64748b", fontWeight: 500 }}>Total Returns</span>}
                   value={summary.totalReturns}
@@ -419,15 +466,31 @@ export const SuperAdminDashboard = () => {
             </Col>
           </Row>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <ChartContainer title="Revenue Overview">
+              <RevenueDoughnut 
+                data={[
+                  { name: 'Actual Revenue', value: summary.totalRevenue || 0 },
+                  { name: 'Expected Revenue', value: summary.totalExpectedRevenue || 0 },
+                  { name: 'Gap', value: (summary.totalExpectedRevenue || 0) - (summary.totalRevenue || 0) }
+                ]}
+              />
+            </ChartContainer>
+
+            <ChartContainer title="Top 5 Branches Performance">
+              <TopBranchesBarChart data={summary.topBranches || []} />
+            </ChartContainer>
+          </div>
+
           <AntCard
             title={
               <span style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a" }}>
                 <DashboardOutlined style={{ marginRight: "8px", color: "#2563eb" }} />
-                Top 5 Performing Branches
+                Top 5 Performing Branches Table
               </span>
             }
             style={sectionCardStyle}
-            bodyStyle={tableCardBodyStyle}
+            styles={{ body: tableCardBodyStyle }}
           >
             <Table
               {...tableCommonProps}
@@ -507,15 +570,22 @@ export const SuperAdminDashboard = () => {
       )}
 
       {activeTab === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          <ChartContainer title="Branch Performance - Revenue vs Expected (Profit/Loss Analysis)" height={450}>
+            <BranchPerformanceChart 
+              data={branchAnalytics} 
+              selectedBranches={filters.selectedBranches}
+            />
+          </ChartContainer>
+          
           <AntCard
             title={
               <span style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a" }}>
-                All Branches Analytics
+                All Branches Analytics Table
               </span>
             }
             style={sectionCardStyle}
-            bodyStyle={tableCardBodyStyle}
+            styles={{ body: tableCardBodyStyle }}
           >
             <Table
               {...tableCommonProps}
@@ -627,15 +697,19 @@ export const SuperAdminDashboard = () => {
       )}
 
       {activeTab === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          <ChartContainer title="Product Performance Overview" height={450}>
+            <ProductRevenueChart data={productDistribution} />
+          </ChartContainer>
+          
           <AntCard
             title={
               <span style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a" }}>
-                Product Distribution Across Branches
+                Product Distribution Table
               </span>
             }
             style={sectionCardStyle}
-            bodyStyle={tableCardBodyStyle}
+            styles={{ body: tableCardBodyStyle }}
           >
             <Table
               {...tableCommonProps}
@@ -726,10 +800,14 @@ export const SuperAdminDashboard = () => {
             </div>
           </div>
 
-          <Row gutter={[12, 12]}>
-            <Col xs={24} sm={12} md={6}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <ChartContainer title={`Revenue Breakdown - ${branchReport?.branch?.name}`} height={350}>
+              <BranchDetailChart branchReport={branchReport} />
+            </ChartContainer>
+            
+            <div className="space-y-4">
               <AntCard
-                bodyStyle={compactCardBodyStyle}
+                styles={{ body: compactCardBodyStyle }}
                 style={{
                   ...summaryCardStyle,
                   background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
@@ -742,10 +820,9 @@ export const SuperAdminDashboard = () => {
                   styles={{ content: { color: "#1e40af", fontSize: "1.5rem", fontWeight: "800" } }}
                 />
               </AntCard>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
+              
               <AntCard
-                bodyStyle={compactCardBodyStyle}
+                styles={{ body: compactCardBodyStyle }}
                 style={{
                   ...summaryCardStyle,
                   background: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)",
@@ -760,40 +837,8 @@ export const SuperAdminDashboard = () => {
                   styles={{ content: { color: "#166534", fontSize: "1.5rem", fontWeight: "800" } }}
                 />
               </AntCard>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <AntCard
-                bodyStyle={compactCardBodyStyle}
-                style={{
-                  ...summaryCardStyle,
-                  background: "linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)",
-                }}
-                hoverable
-              >
-                <Statistic
-                  title={<span style={{ color: "#c2410c", fontWeight: "600" }}>Gap</span>}
-                  value={formatCurrency(branchReport.revenueDifference)}
-                  styles={{ content: { color: "#9a3412", fontSize: "1.5rem", fontWeight: "800" } }}
-                />
-              </AntCard>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <AntCard
-                bodyStyle={compactCardBodyStyle}
-                style={{
-                  ...summaryCardStyle,
-                  background: "linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)",
-                }}
-                hoverable
-              >
-                <Statistic
-                  title={<span style={{ color: "#7c3aed", fontWeight: "600" }}>Transactions</span>}
-                  value={branchReport.salesCount}
-                  styles={{ content: { color: "#6d28d9", fontSize: "1.5rem", fontWeight: "800" } }}
-                />
-              </AntCard>
-            </Col>
-          </Row>
+            </div>
+          </div>
 
           <AntCard
             title={
@@ -802,7 +847,7 @@ export const SuperAdminDashboard = () => {
               </span>
             }
             style={sectionCardStyle}
-            bodyStyle={tableCardBodyStyle}
+            styles={{ body: tableCardBodyStyle }}
           >
             <Table
               {...tableCommonProps}

@@ -10,7 +10,10 @@ import {
  */
 export const getDashboard = async (req, res) => {
   try {
-    const data = await getSuperAdminDashboard();
+    const { days = 30, limit = 10 } = req.query;
+    
+    console.log(`[DASHBOARD] Loading data for days=${days}, limit=${limit}`);
+    const data = await getSuperAdminDashboard({ days: parseInt(days), limit: parseInt(limit) });
     
     return res.status(200).json({
       success: true,

@@ -34,12 +34,12 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   // If no token, always redirect to login
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
-  // If no user data, redirect to login
+  // If no user data, redirect to landing
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Validate user has required fields

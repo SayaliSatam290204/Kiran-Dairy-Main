@@ -66,6 +66,7 @@ function App() {
 
           {/* Auth */}
           <Route path="/login" element={<Login />} />
+          <Route path="/login/:role" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
           {/* Super Admin */}

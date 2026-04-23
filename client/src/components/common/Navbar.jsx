@@ -32,8 +32,8 @@ export const Navbar = () => {
     setConfirmOpen(false);
     setMenuOpen(false);
     logout();
-    toast.success("Logged out");
-    navigate("/login");
+    toast.success("Logged out successfully!");
+    navigate("/", { replace: true });
   };
 
   return (

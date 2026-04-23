@@ -58,6 +58,7 @@ export const salesController = {
       // Calculate items with subtotal
       const processedItems = items.map(item => ({
         productId: item.productId,
+        productName: item.productName,
         quantity: item.quantity,
         price: item.price,
         subtotal: item.price * item.quantity
